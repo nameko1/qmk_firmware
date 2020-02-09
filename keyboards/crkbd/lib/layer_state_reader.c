@@ -9,6 +9,10 @@
 #define L_RAISE 4
 #define L_ADJUST 8
 #define L_ADJUST_TRI 14
+#define L_VI_NORMAL 16
+#define L_VI_NORMAL_LOWER 18
+#define L_VI_NORMAL_RAISE 20
+#define L_VI_VISUAL 32
 
 char layer_state_str[24];
 
@@ -23,6 +27,14 @@ const char *read_layer_state(void) {
     break;
   case L_LOWER:
     snprintf(layer_state_str, sizeof(layer_state_str), "Layer: Lower");
+    break;
+  case L_VI_NORMAL:
+  case L_VI_NORMAL_LOWER:
+  case L_VI_NORMAL_RAISE:
+    snprintf(layer_state_str, sizeof(layer_state_str), "Layer: Normal");
+    break;
+  case L_VI_VISUAL:
+    snprintf(layer_state_str, sizeof(layer_state_str), "Layer: Visual");
     break;
   case L_ADJUST:
   case L_ADJUST_TRI:
