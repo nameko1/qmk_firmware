@@ -1,4 +1,7 @@
 #include QMK_KEYBOARD_H
+#ifdef LEADER_ENABLE
+  #include "leader.c"
+#endif
 
 
 #ifdef RGBLIGHT_ENABLE
@@ -6,6 +9,8 @@
 extern rgblight_config_t rgblight_config;
 #endif
 
+bool shift_pressed;
+bool control_pressed;
 extern uint8_t is_master;
 
 // Each layer gets a name for readability, which is then used in the keymap matrix below.
@@ -13,44 +18,60 @@ extern uint8_t is_master;
 // Layer names don't all need to be of the same length, obviously, and you can also skip them
 // entirely and just use numbers.
 #define _QWERTY 0
-#define _LOWER 1
-#define _RAISE 2
-#define _ADJUST 3
 #define _NORMAL 4
-#define _VISUAL 5
-#define _DELETE 6
+#define _LOOP 5
+#define _VISUAL 6
+#define _DELETE 7
+#define _YANK 8
+#define _LOWER 14
+#define _RAISE 15
+#define _ADJUST 16
 
-leader_start()
-LEADER_EXTERNS()
-LEADER_DICTIONARY()
 
 /* #define LOWER MO(_LOWER) */
 /* #define RAISE MO(_RAISE) */
-/* #define NORMAL TD(ETNTER_NORMAL_MODE) */
 #define VISUAL TO(_VISUAL)
-#define DELETE OSL(_DELETE)
+/* #define DELETE OSL(_DELETE) */
+
+// key define
+/* #define TAP_KEY(k) tap_code16(k); */
+/* #define TAP_HOME tap_code16(LGUI(KC_LEFT)); */
+/* #define TAP_END tap_code16(LGUI(KC_RIGHT)); */
+/* #define TAP_COPY tap_code16(LGUI(KC_C)); */
+
 
 enum custom_keycodes {
+  //layers
   QWERTY = SAFE_RANGE,
-  EX_NOML,
+  INSERT,
   LOWER,
   RAISE,
   ADJUST,
+  #ifndef TAP_DANCE_ENABLE
+  L_NOML,
+  #endif
+  L_YANK,
+  L_LOOP,
+  //commands
+  COPY,
   PASTE,
+  CUT,
   VI_UP,
   VI_DOWN,
   VI_LEFT,
   VI_RGHT,
   VI_YANK,
+  VI_SFT,
+  VI_CTL,
+  IN_LINE,
   WORD,
   EORD,
   BORD,
-  UNDO,
   VI_WORD,
   VI_EORD,
   VI_BORD,
   BACKLIT,
-  VI_DEL,
+  /* VI_DEL, */
   NOTHING,
   /* RGBRST */
 };
@@ -64,8 +85,7 @@ enum tap_dance_events {
 #ifdef COMBO_ENABLE
 enum combo_events {
   VI_ESC,
-  JP_KANA,
-  VI_REDO
+  JP_KANA
 };
 #endif
 
@@ -87,9 +107,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
        KC_ESC,    KC_1,    KC_2,    KC_3,    KC_4,    KC_5,                         KC_6,    KC_7,    KC_8,    KC_9,    KC_0, _______,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      _______, XXXXXXX, XXXXXXX, XXXXXXX, KC_BSLS,  KC_GRV,                      KC_MINS, KC_LBRC, KC_RBRC,  KC_EQL, KC_SCLN, _______,\
+      _______, XXXXXXX, XXXXXXX, XXXXXXX, KC_BSLS,  KC_GRV,                      KC_MINS,  KC_EQL, KC_LBRC, KC_RBRC, KC_SCLN, _______,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, _______, XXXXXXX, XXXXXXX,\
+      _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, _______, _______, _______, _______,\
   //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
                                           _______, _______, _______,    _______,  _______, _______ \
                                       //`--------------------------'  `--------------------------'
@@ -99,9 +119,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
       _______, KC_EXLM,   KC_AT, KC_HASH,  KC_DLR, KC_PERC,                      KC_CIRC, KC_AMPR, KC_ASTR, KC_LPRN, KC_RPRN, _______,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      _______, XXXXXXX, XXXXXXX, XXXXXXX, KC_PIPE, KC_TILD,                      KC_UNDS, KC_LCBR, KC_RCBR, KC_PLUS, KC_COLN, _______,\
+      _______, XXXXXXX, XXXXXXX, XXXXXXX, KC_PIPE, KC_TILD,                      KC_UNDS, KC_PLUS, KC_LCBR, KC_RCBR, KC_COLN, _______,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                       NORMAL, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+      _______, XXXXXXX,     CUT,    COPY,   PASTE, XXXXXXX,                       L_NOML, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
                                           _______, _______, _______,    _______,  _______, _______ \
                                       //`--------------------------'  `--------------------------'
@@ -111,7 +131,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
       XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      RGB_TOG, RGB_HUI, RGB_SAI, RGB_VAI, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+      RGB_TOG, RGB_HUI, RGB_SAI, RGB_VAI, XXXXXXX, XXXXXXX,                      XXXXXXX,  L_NOML, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
       RGB_MOD, RGB_HUD, RGB_SAD, RGB_VAD, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
@@ -122,11 +142,35 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // vi normal mode
   [_NORMAL] = LAYOUT( \
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
-      XXXXXXX, XXXXXXX,    WORD,    EORD, XXXXXXX, XXXXXXX,                      XXXXXXX,    UNDO, EX_NOML, XXXXXXX,   PASTE, XXXXXXX,\
+      XXXXXXX, XXXXXXX,    WORD,    EORD, XXXXXXX, XXXXXXX,                       L_YANK, _______, _______, _______,   PASTE, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      XXXXXXX, XXXXXXX, XXXXXXX,  DELETE, XXXXXXX, XXXXXXX,                      KC_LEFT, KC_DOWN,   KC_UP, KC_RGHT, XXXXXXX, _______,\
+       VI_CTL, _______, XXXXXXX, _______, _______, XXXXXXX,                      KC_LEFT, KC_DOWN,   KC_UP, KC_RGHT, XXXXXXX, IN_LINE,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
       XXXXXXX, XXXXXXX,  KC_DEL, XXXXXXX,  VISUAL,    BORD,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+  //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
+                                          _______, _______,  VI_SFT,     VI_SFT,  L_LOOP, _______ \
+                                      //`--------------------------'  `--------------------------'
+  ),
+
+  [_LOOP] = LAYOUT( \
+  //,-----------------------------------------------------.                    ,-----------------------------------------------------.
+      XXXXXXX, XXXXXXX,    KC_W, XXXXXXX, XXXXXXX, XXXXXXX,                         KC_Y, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+  //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
+      XXXXXXX, XXXXXXX, XXXXXXX,    KC_D, XXXXXXX,    KC_G,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+  //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
+      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,    KC_B,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+  //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
+                                          _______, _______, _______,    _______, XXXXXXX, _______ \
+                                      //`--------------------------'  `--------------------------'
+  ),
+
+  [_YANK] = LAYOUT( \
+  //,-----------------------------------------------------.                    ,-----------------------------------------------------.
+      XXXXXXX, XXXXXXX,    KC_W, XXXXXXX, XXXXXXX, XXXXXXX,                         KC_Y, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+  //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
+      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,    KC_G,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+  //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
+      XXXXXXX, XXXXXXX,  KC_DEL, XXXXXXX, XXXXXXX,    KC_B,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
                                           _______, _______, _______,    _______,  _______, _______ \
                                       //`--------------------------'  `--------------------------'
@@ -135,11 +179,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // vi visual mode
   [_VISUAL] = LAYOUT( \
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
-      XXXXXXX, XXXXXXX, VI_WORD, VI_EORD, XXXXXXX, XXXXXXX,                      VI_YANK, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,  NORMAL,\
+      XXXXXXX, XXXXXXX, VI_WORD, VI_EORD, XXXXXXX, XXXXXXX,                      VI_YANK, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,  L_NOML,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
       XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                      VI_LEFT, VI_DOWN,   VI_UP, VI_RGHT, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,  NORMAL, VI_BORD,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+      XXXXXXX, XXXXXXX,  KC_DEL, XXXXXXX,  L_NOML, VI_BORD,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
                                           _______, _______, _______,    _______,  _______, _______ \
                                       //`--------------------------'  `--------------------------'
@@ -148,9 +192,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // vi delete layer
   [_DELETE] = LAYOUT( \
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
-      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, NOTHING,\
+      XXXXXXX, XXXXXXX,    KC_W, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,  L_NOML,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      XXXXXXX, XXXXXXX, XXXXXXX,  VI_DEL, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+      XXXXXXX, XXXXXXX, XXXXXXX,    KC_D, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
       XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
@@ -169,33 +213,25 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 #ifdef COMBO_ENABLE
 typedef const uint16_t comb_keys_t[];
 const uint16_t PROGMEM vi_esc_combo[] = {KC_LCTL, KC_BSPC, COMBO_END};
-const uint16_t PROGMEM jp_kana_combo[] = {KC_LCTL, KC_SCLN, COMBO_END};
-/* const uint16_t PROGMEM vi_redo_combo[] = {KC_LCTL, KC_R, COMBO_END}; */
+const uint16_t PROGMEM jp_kana_combo[] = {KC_LCTL, KC_ENT, COMBO_END};
 
 combo_t key_combos[COMBO_COUNT] = {
   [VI_ESC] = COMBO_ACTION(vi_esc_combo),
   [JP_KANA] = COMBO_ACTION(jp_kana_combo),
-  /* [VI_REDO] = COMBO_ACTION(vi_redo_combo), */
 };
 
 void process_combo_event(uint8_t combo_index, bool pressed) {
   switch(combo_index) {
     case VI_ESC:
       if (pressed) {
-        tap_code16(LCTL(KC_LBRC));
+        TAP_KEY(LCTL(KC_LBRC));
       }
       break;
     case JP_KANA:
       if (pressed) {
-        tap_code16(KC_LANG1);
+        TAP_KEY(KC_LANG1);
       }
       break;
-  /*   case VI_REDO: */
-  /*     #<{(| if (pressed && IS_LAYER_ON(_NORMAL)) { |)}># */
-  /*     if (pressed) { */
-  /*       tap_code16(LSFT(LGUI(KC_Z))); */
-  /*     } */
-  /*     break; */
   }
 }
 #endif
@@ -218,14 +254,15 @@ void update_tri_layer_RGB(uint8_t layer1, uint8_t layer2, uint8_t layer3) {
   }
 }
 
+
 void matrix_init_user(void) {
-    #ifdef RGBLIGHT_ENABLE
-      RGB_current_mode = rgblight_config.mode;
-    #endif
-    //SSD1306 OLED init, make sure to add #define SSD1306OLED in config.h
-    #ifdef SSD1306OLED
-        iota_gfx_init(!has_usb());   // turns on the display
-    #endif
+  #ifdef RGBLIGHT_ENABLE
+    RGB_current_mode = rgblight_config.mode;
+  #endif
+  //SSD1306 OLED init, make sure to add #define SSD1306OLED in config.h
+  #ifdef SSD1306OLED
+      iota_gfx_init(!has_usb());   // turns on the display
+  #endif
 }
 
 //SSD1306 OLED update loop, make sure to add #define SSD1306OLED in config.h
@@ -242,10 +279,6 @@ const char *read_keylogs(void);
 // const char *read_host_led_state(void);
 // void set_timelog(void);
 // const char *read_timelog(void);
-
-void matrix_scan_user(void) {
-   iota_gfx_task();
-}
 
 void matrix_render_user(struct CharacterMatrix *matrix) {
   if (is_master) {
@@ -276,12 +309,179 @@ void iota_gfx_task_user(void) {
 }
 #endif//SSD1306OLED
 
+#ifdef LEADER_ENABLE
+
+void leader_end() {
+  if (IS_LAYER_ON(_YANK)) {
+    layer_off(_YANK);
+  }
+  if (IS_LAYER_ON(_DELETE)) {
+    layer_off(_DELETE);
+  }
+  if (IS_LAYER_ON(_LOOP)) {
+    layer_off(_LOOP);
+  }
+}
+
+#define SELECT_WORD TAP_KEY(LALT(LSFT(KC_RGHT)))
+#endif
+void matrix_scan_user(void) {
+  iota_gfx_task();
+
+  #ifdef LEADER_ENABLE
+  if (IS_LAYER_ON(_YANK)) {
+    LEADER_DICTIONARY() {
+      leading = false;
+      leader_end();
+      SEQ_ONE_KEY(KC_W) {
+        TAP_KEY(LALT(LSFT(KC_RGHT)))
+        TAP_COPY
+        TAP_KEY(KC_LEFT)
+      }
+      SEQ_ONE_KEY(KC_Y) {
+        yank_some_lines(1);
+      }
+      SEQ_ONE_KEY(LSFT(KC_G)) {
+        TAP_HOME
+        TAP_KEY(LSFT(LGUI(KC_DOWN)))
+        TAP_COPY
+        TAP_KEY(KC_LEFT)
+      }
+      SEQ_TWO_KEYS(KC_G, KC_G) {
+        TAP_END
+        TAP_KEY(LSFT(LGUI(KC_UP)))
+        TAP_COPY
+        TAP_KEY(KC_RGHT)
+      }
+      SEQ_ONE_KEY(KC_B) {
+        TAP_KEY(LALT(LSFT(KC_LEFT)))
+        TAP_COPY
+        TAP_KEY(KC_RGHT)
+      }
+    }
+  }
+  if (IS_LAYER_ON(_DELETE)) {
+    LEADER_DICTIONARY() {
+      leading = false;
+      leader_end();
+      SEQ_ONE_KEY(KC_D) {
+        delete_some_lines(1);
+      }
+      SEQ_ONE_KEY(KC_W) {
+        TAP_KEY(LSFT(LALT(KC_RGHT)))
+        TAP_KEY(KC_DEL)
+      }
+    }
+  }
+  if (IS_LAYER_ON(_LOOP)) {
+    LEADER_DICTIONARY() {
+      leading = false;
+      leader_end();
+      SEQ_ONE_KEY(KC_0) {
+        TAP_HOME
+      }
+      SEQ_DIGIT_TWO_KEYS(KC_Y, KC_Y) {
+        yank_some_lines(KC_TO_NUM(leader_sequence[0]));
+      }
+      SEQ_DIGIT_TWO_KEYS(KC_D, KC_D) {
+        delete_some_lines(KC_TO_NUM(leader_sequence[0]));
+      }
+    }
+  }
+  #endif  //LEADER_ENABLE
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   if (record->event.pressed) {
 #ifdef SSD1306OLED
     set_keylog(keycode, record);
 #endif
     // set_timelog();
+  }
+
+  if (IS_LAYER_ON(_NORMAL)) {
+    switch (keycode) {
+      case KC_I:
+        if (record->event.pressed) {
+          if (shift_pressed) { TAP_KEY(LGUI(KC_RGHT)) }
+          layer_off(_NORMAL);
+        }
+        return false;
+      case KC_U:
+        if (record->event.pressed) {
+          if (control_pressed) {
+            TAP_KEY(KC_PGUP)
+          } else {
+            TAP_KEY(LGUI(KC_Z))
+          }
+        }
+        return false;
+      case KC_O:
+        if (record->event.pressed) {
+          if (shift_pressed) {
+            TAP_KEY(KC_UP)
+            TAP_KEY(LGUI(KC_RGHT))
+            TAP_KEY(KC_ENT)
+          } else {
+            TAP_KEY(KC_DOWN)
+            TAP_KEY(LGUI(KC_LEFT))
+            TAP_KEY(KC_ENT)
+            TAP_KEY(KC_UP)
+          }
+          layer_off(_NORMAL);
+        }
+        return false;
+      case KC_A:
+        if (record->event.pressed) {
+          if (shift_pressed) {
+            TAP_KEY(LGUI(KC_LEFT))
+          } else {
+            TAP_KEY(KC_RIGHT)
+          }
+          layer_off(_NORMAL);
+        }
+        return false;
+      case KC_D:
+        if (IS_LAYER_ON(_DELETE) || IS_LAYER_ON(_LOOP)) {
+          return true;
+        }
+        if (record->event.pressed) {
+          if (control_pressed) {
+            TAP_KEY(KC_PGDN)
+          } else {
+            layer_on(_DELETE);
+            qk_leader_start();
+            return false;
+          }
+        }
+        break;
+      case KC_F:
+        if (record->event.pressed) {
+          if (control_pressed) {
+            TAP_KEY(KC_PGDN)
+          }
+        }
+        return false;
+      case KC_DLR:
+        if (record->event.pressed) {
+          TAP_KEY(LGUI(KC_RGHT))
+        }
+        return false;
+    }
+  }
+  if (IS_LAYER_ON(_VISUAL)) {
+    switch (keycode) {
+      case KC_0:
+        if (record->event.pressed) {
+          TAP_KEY(SGUI(KC_LEFT))
+        }
+        return false;
+      case KC_DLR:
+        if (record->event.pressed) {
+          TAP_KEY(SGUI(KC_RGHT))
+        }
+        return false;
+    }
   }
 
   switch (keycode) {
@@ -314,16 +514,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       }
       break;
     case VI_YANK:
+    case COPY:
       if (record->event.pressed) {
         tap_code16(LGUI(KC_C));
-        tap_code16(KC_LEFT);
-        layer_off(_VISUAL);
-        layer_on(_NORMAL);
-      }
-      break;
-    case UNDO:
-      if (record->event.pressed) {
-        tap_code16(LGUI(KC_Z));
+        if (keycode == VI_YANK) {
+          tap_code16(KC_LEFT);
+          layer_off(_VISUAL);
+          layer_on(_NORMAL);
+        }
       }
       break;
     case QWERTY:
@@ -349,18 +547,55 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         update_tri_layer_RGB(_LOWER, _RAISE, _ADJUST);
       }
       return false;
-    case EX_NOML:
-        if (!record->event.pressed) {
-          layer_off(_NORMAL);
+    #ifndef TAP_DANCE_ENABLE
+    case L_NOML:
+      if (record->event.pressed) {
+        layer_on(_NORMAL);
+        if (IS_LAYER_ON(_VISUAL)) {
+          layer_off(_VISUAL);
         }
-        return false;
+        if (IS_LAYER_ON(_DELETE)) {
+          layer_off(_DELETE);
+        }
+      }
+      return false;
+    #endif
+    case L_LOOP:
+      if (record->event.pressed) {
+        layer_on(_RAISE);
+        layer_on(_LOOP);
+        qk_leader_start();
+      }
+      if (!record->event.pressed) {
+        layer_off(_RAISE);
+      }
+      return false;
+    case L_YANK:
+      if (record->event.pressed) {
+        layer_on(_YANK);
+        qk_leader_start();
+      }
+      return false;
+    case INSERT:
+      if (record->event.pressed) {
+        layer_off(_NORMAL);
+      }
+      return false;
+    case IN_LINE:
+      if (record->event.pressed) {
+        TAP_KEY(KC_DOWN)
+        TAP_KEY(LGUI(KC_LEFT))
+        TAP_KEY(KC_ENT)
+        TAP_KEY(KC_UP)
+      }
+      break;
     case ADJUST:
-        if (record->event.pressed) {
-          layer_on(_ADJUST);
-        } else {
-          layer_off(_ADJUST);
-        }
-        return false;
+      if (record->event.pressed) {
+        layer_on(_ADJUST);
+      } else {
+        layer_off(_ADJUST);
+      }
+      return false;
     case RGB_MOD:
       #ifdef RGBLIGHT_ENABLE
         if (record->event.pressed) {
@@ -381,32 +616,53 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     /*   break; */
     case PASTE:
       if (record->event.pressed) {
-          tap_code16(LGUI(KC_V));
+          TAP_KEY(LGUI(KC_V));
+      }
+      break;
+    case CUT:
+      if (record->event.pressed) {
+          TAP_KEY(LGUI(KC_X));
+      }
+      break;
+    case VI_WORD:
+    case VI_EORD:
+      if (record->event.pressed) {
+        TAP_KEY(LALT(LSFT(KC_RGHT)));
+        if (keycode == VI_WORD) {
+          TAP_KEY(LALT(LSFT(KC_RGHT)));
+          TAP_KEY(LALT(LSFT(KC_LEFT)));
+          TAP_KEY(LSFT(KC_LEFT));
+        }
       }
       break;
     case WORD:
     case EORD:
-    case VI_WORD:
-    case VI_EORD:
       if (record->event.pressed) {
-        tap_code16(LALT(KC_RGHT));
+        TAP_KEY(LALT(KC_RGHT));
         if (keycode == WORD) {
-          tap_code16(KC_RGHT);
+          TAP_KEY(LALT(KC_RGHT));
+          TAP_KEY(LALT(KC_LEFT));
         }
       }
       break;
     case VI_BORD:
     case BORD:
       if (record->event.pressed) {
-          tap_code16(LALT(KC_LEFT));
+          TAP_KEY(LALT(KC_LEFT));
       }
       break;
-    case VI_DEL:
+    case VI_SFT:
       if (record->event.pressed) {
-        tap_code16(LCTL(KC_A));
-        tap_code16(LGUI(LSFT(KC_RGHT)));
-        tap_code16(LCTL(KC_D));
-        tap_code16(LCTL(KC_D));
+        shift_pressed=true;
+      } else {
+        shift_pressed=false;
+      }
+      break;
+    case VI_CTL:
+      if (record->event.pressed) {
+        control_pressed=true;
+      } else {
+        control_pressed=false;
       }
       break;
     case NOTHING:

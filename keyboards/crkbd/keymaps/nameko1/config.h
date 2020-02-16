@@ -32,8 +32,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define USE_SERIAL_PD2
 
-#define TAPPING_FORCE_HOLD
-#define TAPPING_TERM 200
+#ifdef TAP_DANCE_ENABLE
+  #define TAPPING_FORCE_HOLD
+  #define TAPPING_TERM 200
+  #define NORMAL TD(ETNTER_NORMAL_MODE)
+#endif
 
 #ifdef RGBLIGHT_ENABLE
     #undef RGBLED_NUM
@@ -48,6 +51,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Multi Tap
 #define MT_SS MT(MOD_LSFT, KC_SPC)
 #ifdef COMBO_ENABLE
-    #define COMBO_COUNT         3
-    #define COMBO_TERM          300
+    #define COMBO_COUNT         2
+    #define COMBO_TERM          200
 #endif
+
+#ifdef LEADER_ENABLE
+    #define LEADER_PER_KEY_TIMING
+    // #define LEADER_TIMEOUT 250
+    #define LEADER_TIMEOUT 350
+#endif
+
+// key tap macros
+#define TAP_KEY(k) tap_code16(k);
+#define TAP_HOME tap_code16(LGUI(KC_LEFT));
+#define TAP_END tap_code16(LGUI(KC_RIGHT));
+#define TAP_COPY tap_code16(LGUI(KC_C));
