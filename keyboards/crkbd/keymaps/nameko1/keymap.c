@@ -11,6 +11,7 @@ extern rgblight_config_t rgblight_config;
 
 bool shift_pressed;
 bool control_pressed;
+bool c_mode = false;
 extern uint8_t is_master;
 
 // Each layer gets a name for readability, which is then used in the keymap matrix below.
@@ -27,18 +28,8 @@ extern uint8_t is_master;
 #define _RAISE 15
 #define _ADJUST 16
 
-
-/* #define LOWER MO(_LOWER) */
-/* #define RAISE MO(_RAISE) */
 #define VISUAL TO(_VISUAL)
-/* #define DELETE OSL(_DELETE) */
-
-// key define
-/* #define TAP_KEY(k) tap_code16(k); */
-/* #define TAP_HOME tap_code16(LGUI(KC_LEFT)); */
-/* #define TAP_END tap_code16(LGUI(KC_RIGHT)); */
-/* #define TAP_COPY tap_code16(LGUI(KC_C)); */
-
+#define ALFRED register_code16(LCTL(KC_QUOT));unregister_code16(LCTL(KC_QUOT));
 
 enum custom_keycodes {
   //layers
@@ -71,8 +62,8 @@ enum custom_keycodes {
   VI_EORD,
   VI_BORD,
   BACKLIT,
-  /* VI_DEL, */
   NOTHING,
+  ALF,
   /* RGBRST */
 };
 
@@ -129,7 +120,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   [_ADJUST] = LAYOUT( \
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
-      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,     ALF,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
       RGB_TOG, RGB_HUI, RGB_SAI, RGB_VAI, XXXXXXX, XXXXXXX,                      XXXXXXX,  L_NOML, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
@@ -146,7 +137,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
        VI_CTL, _______, XXXXXXX, _______, _______, XXXXXXX,                      KC_LEFT, KC_DOWN,   KC_UP, KC_RGHT, XXXXXXX, IN_LINE,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
-      XXXXXXX, XXXXXXX,  KC_DEL, XXXXXXX,  VISUAL,    BORD,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
+      XXXXXXX, XXXXXXX,  KC_DEL, _______,  VISUAL,    BORD,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------+--------|  |--------+--------+--------+--------+--------+--------+--------|
                                           _______, _______,  VI_SFT,     VI_SFT,  L_LOOP, _______ \
                                       //`--------------------------'  `--------------------------'
@@ -192,7 +183,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // vi delete layer
   [_DELETE] = LAYOUT( \
   //,-----------------------------------------------------.                    ,-----------------------------------------------------.
-      XXXXXXX, XXXXXXX,    KC_W, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,  L_NOML,\
+      XXXXXXX, XXXXXXX,    KC_W, XXXXXXX, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX,    KC_I, XXXXXXX, XXXXXXX,  L_NOML,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
       XXXXXXX, XXXXXXX, XXXXXXX,    KC_D, XXXXXXX, XXXXXXX,                      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,\
   //|--------+--------+--------+--------+--------+--------|                    |--------+--------+--------+--------+--------+--------|
@@ -317,6 +308,10 @@ void leader_end() {
   }
   if (IS_LAYER_ON(_DELETE)) {
     layer_off(_DELETE);
+    if (c_mode) {
+      c_mode = false;
+      layer_off(_NORMAL);
+    }
   }
   if (IS_LAYER_ON(_LOOP)) {
     layer_off(_LOOP);
@@ -365,9 +360,16 @@ void matrix_scan_user(void) {
       leading = false;
       leader_end();
       SEQ_ONE_KEY(KC_D) {
-        delete_some_lines(1);
+        if (!c_mode) {
+          delete_some_lines(1);
+        }
       }
       SEQ_ONE_KEY(KC_W) {
+        TAP_KEY(LSFT(LALT(KC_RGHT)))
+        TAP_KEY(KC_DEL)
+      }
+      SEQ_TWO_KEYS(KC_I, KC_W) {
+        TAP_KEY(LALT(KC_LEFT))
         TAP_KEY(LSFT(LALT(KC_RGHT)))
         TAP_KEY(KC_DEL)
       }
@@ -404,6 +406,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       case KC_I:
         if (record->event.pressed) {
           if (shift_pressed) { TAP_KEY(LGUI(KC_RGHT)) }
+          if (IS_LAYER_ON(_DELETE)) { return true;}
           layer_off(_NORMAL);
         }
         return false;
@@ -442,6 +445,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
         return false;
       case KC_D:
+      case KC_C:
         if (IS_LAYER_ON(_DELETE) || IS_LAYER_ON(_LOOP)) {
           return true;
         }
@@ -449,6 +453,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           if (control_pressed) {
             TAP_KEY(KC_PGDN)
           } else {
+            if (keycode == KC_C) {c_mode = true;}
             layer_on(_DELETE);
             qk_leader_start();
             return false;
@@ -462,6 +467,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           }
         }
         return false;
+      case KC_DOWN:
+        if (record->event.pressed) {
+          if (shift_pressed) {
+            TAP_END
+            TAP_KEY(KC_SPC)
+            TAP_KEY(KC_DEL)
+            return false;
+          }
+        }
+        return true;
       case KC_DLR:
         if (record->event.pressed) {
           TAP_KEY(LGUI(KC_RGHT))
@@ -485,6 +500,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   }
 
   switch (keycode) {
+    case ALF:
+      if (record->event.pressed) {
+        ALFRED
+        TAP_KEY(KC_T)
+        TAP_KEY(KC_I)
+        TAP_KEY(KC_ENT)
+      }
+        break;
     case VI_UP:
       if (record->event.pressed) {
         register_code16(LSFT(KC_UP));
@@ -583,10 +606,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       return false;
     case IN_LINE:
       if (record->event.pressed) {
-        TAP_KEY(KC_DOWN)
-        TAP_KEY(LGUI(KC_LEFT))
+        TAP_KEY(LGUI(KC_RGHT))
         TAP_KEY(KC_ENT)
-        TAP_KEY(KC_UP)
       }
       break;
     case ADJUST:
