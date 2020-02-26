@@ -66,3 +66,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define TAP_HOME tap_code16(LGUI(KC_LEFT));
 #define TAP_END tap_code16(LGUI(KC_RIGHT));
 #define TAP_COPY tap_code16(LGUI(KC_C));
+#define TAP_CUT tap_code16(LGUI(KC_X));

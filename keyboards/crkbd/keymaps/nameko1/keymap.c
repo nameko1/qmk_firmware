@@ -366,12 +366,12 @@ void matrix_scan_user(void) {
       }
       SEQ_ONE_KEY(KC_W) {
         TAP_KEY(LSFT(LALT(KC_RGHT)))
-        TAP_KEY(KC_DEL)
+        TAP_CUT
       }
       SEQ_TWO_KEYS(KC_I, KC_W) {
         TAP_KEY(LALT(KC_LEFT))
         TAP_KEY(LSFT(LALT(KC_RGHT)))
-        TAP_KEY(KC_DEL)
+        TAP_CUT
       }
     }
   }

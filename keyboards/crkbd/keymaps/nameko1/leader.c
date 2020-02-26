@@ -50,5 +50,5 @@ void delete_some_lines(uint16_t num) {
   for (int i = 1; i < num; i++) {
     TAP_KEY(LSFT(KC_DOWN))
   }
-  TAP_KEY(KC_DEL)
+  TAP_CUT
 }
